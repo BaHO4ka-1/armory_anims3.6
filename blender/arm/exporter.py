@@ -482,8 +482,12 @@ class ArmoryExporter:
     
     def export_bone_layers(self, armature: bpy.types.Object, bone: bpy.types.Bone, o):
         layers = []
-        for layer in bone.layers:
-            layers.append(layer)
+        if bpy.app.version < (4, 0, 0):
+            for layer in bone.layers:
+                layers.append(layer)
+        else:
+            for bonecollection in armature.data.collections:
+                layers.append(bonecollection.is_visible)
         o['bone_layers'] = layers
 
     def use_default_material(self, bobject: bpy.types.Object, o):
@@ -776,10 +780,15 @@ class ArmoryExporter:
             if bobject.hide_render or not bobject.arm_visible:
                 out_object['visible'] = False
 
-            if not bobject.visible_camera:
-                out_object['visible_mesh'] = False
-            if not bobject.visible_shadow:
-                out_object['visible_shadow'] = False
+           if bpy.app.version < (3, 0, 0):
+                if not bobject.cycles_visibility:
+                    out_object['visible_mesh'] = False
+                    out_object['visible_shadow'] = False
+            else:
+                if not bobject.visible_camera:
+                    out_object['visible_mesh'] = False
+                if not bobject.visible_shadow:
+                    out_object['visible_shadow'] = False
 
             if not bobject.arm_spawn:
                 out_object['spawn'] = False
@@ -1430,7 +1439,10 @@ class ArmoryExporter:
             )
 
     def export_mesh_data(self, export_mesh: bpy.types.Mesh, bobject: bpy.types.Object, o, has_armature=False):
-        export_mesh.calc_normals_split()
+        if bpy.app.version < (4, 1, 0):
+            export_mesh.calc_normals_split()
+        else:
+            updated_normals = export_mesh.corner_normals
         export_mesh.calc_loop_triangles()
 
         loops = export_mesh.loops
